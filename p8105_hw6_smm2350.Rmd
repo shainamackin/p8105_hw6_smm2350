@@ -1,0 +1,53 @@
+---
+title: "p8105_hw6_smm2350"
+author: "Shaina Mackin"
+date: "12/1/2021"
+output: github_document
+---
+
+# Homework 6
+
+To begin, I'll load libraries and set themes.
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(rvest)
+library(dplyr)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+```
+
+## Problem 1
+
+```{r import1}
+bwt_data = read.csv("/Users/shainamackin/Desktop/Fall 2021/Data Science I/p8105_hw6_smm2350/data/birthweight.csv")
+```
+
+```{r clean1}
+bwt_df = bwt_data %>%
+  janitor::clean_names()
+```
+
+## Problem 2
+
+```{r import2}
+weather_df = 
+  rnoaa::meteo_pull_monitors(
+    c("USW00094728"),
+    var = c("PRCP", "TMIN", "TMAX"), 
+    date_min = "2017-01-01",
+    date_max = "2017-12-31") %>%
+  mutate(
+    name = recode(id, USW00094728 = "CentralPark_NY"),
+    tmin = tmin / 10,
+    tmax = tmax / 10) %>%
+  select(name, id, everything())
+```
+
+
