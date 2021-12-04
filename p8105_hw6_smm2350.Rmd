@@ -33,7 +33,7 @@ bwt_data = read.csv("/Users/shainamackin/Desktop/Fall 2021/Data Science I/p8105_
 ```
 
 ... and then clean it by tidying variable names and factoring when relevant so that it's ready for regression analysis. 
-```{r clean1}
+```{r clean}
 bwt_df = bwt_data %>%
   mutate(
     babysex = factor(babysex),
@@ -63,14 +63,14 @@ colSums(is.na(bwt_df))
 Note: there are no missing values. 
 
 I'll build a linear regression model for birthweight using backwards selection. First, I'll include all variables as predictors in my fully saturated model:  
-```{r saturated1}
+```{r saturated}
 saturated_fit = lm(bwt ~., data = bwt_df)
 
 saturated_fit%>%broom::tidy()%>%knitr::kable()
 ```
 
 Second, I'll run a backward selection using `stepAIC` from the `MASS` package to remove all non-significant predictors from the model. 
-```{r proposed1}
+```{r proposed}
 my_model = MASS::stepAIC(saturated_fit, direction = "backward", trace = FALSE)
 
 my_model%>%broom::tidy() %>%knitr::kable()
@@ -82,7 +82,7 @@ The [literature](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3390317/) confirms
 `my_model` thus includes `babysex`, `bhead`, `blength`, `delwt`, `fincome`, `gaweeks`, `mheight`, `mrace`, `parity`, `ppwt`, and `smoken`.
 
 I'll now create a plot of model residuals against fitted values. 
-```{r plot1}
+```{r plot}
 bwt_resid = add_residuals(bwt_df, my_model) 
 
 bwt_pred = add_predictions(bwt_df, my_model)
@@ -104,7 +104,7 @@ It's now time to use cross validation to compare my model to two others:
 <br/>
 • One using length at birth and gestational age as predictors (main effects only) <br/>
 • One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
-```{r compare1}
+```{r compare}
 model_1 = lm(bwt ~ blength + gaweeks, data = bwt_df)
   
 model_2 = lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex + blength*babysex + bhead*blength*babysex, data = bwt_df)
@@ -152,6 +152,17 @@ The RMSE of `my_model` is the smallest, indicating that my originally proposed m
 ## Problem 2
 
 ```{r import2}
+weather_df = 
+  rnoaa::meteo_pull_monitors(
+    c("USW00094728"),
+    var = c("PRCP", "TMIN", "TMAX"), 
+    date_min = "2017-01-01",
+    date_max = "2017-12-31") %>%
+  mutate(
+    name = recode(id, USW00094728 = "CentralPark_NY"),
+    tmin = tmin / 10,
+    tmax = tmax / 10) %>%
+  select(name, id, everything())
 ```
 
 
