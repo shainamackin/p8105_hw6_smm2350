@@ -12,6 +12,7 @@ To begin, I'll load libraries and set themes.
 ```{r setup, include=FALSE}
 library(tidyverse)
 library(dplyr)
+library(rvest)
 
 theme_set(theme_minimal() + theme(legend.position = "bottom"))
 options(
@@ -57,20 +58,43 @@ bwt_df = bwt_data %>%
   janitor::clean_names()
 ```
 
+I'll build a linear regression model for birthweight using backwards selection. First, I'll include all variables as predictors in my fully saturated model:  
+```{r}
+saturated_fit = lm(bwt ~., data = bwt_df)
+
+saturated_fit%>%broom::tidy()%>%knitr::kable()
+```
+
+Second, I'll run a backward selection using `stepAIC` from the `MASS` package to remove all non-significant predictors in the model. 
+```{r}
+reduced_fit = MASS::stepAIC(saturated_fit, direction = "backward", trace = FALSE)
+
+reduced_fit%>%broom::tidy() %>%knitr::kable()
+```
+All coefficients in this reduced model are now statistically significant. 
+
+The [literature](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3390317/) confirms that smoking exposure, maternal weight, weight gain during pregnancy, and previous LBW babies are all associated with birthweight (Metgud et al., 2012). Race and income should also be kept in the model, as they are statistically significant and increasingly recognized as social determinants of maternal & neonatal health outcomes. We will also keep height, gestational age, baby's length, head circumference, and sex in the model, as they are statistically significant and clinically relevant to birthweight. 
+
+`reduced_fit` is thus my proposed model, including `babysex`, `bhead`, `blength`, `delwt`, `fincome`, `gaweeks`, `mheight`, `race`, `parity`, `ppwt`, and `smoken`.
+
+```{r}
+modelr::add_residuals(bwt_df, reduced_fit)
+
+modelr::add_predictions(bwt_df, reduced_fit)
+
+bwt_df %>% 
+  modelr::add_residuals(reduced_fit) %>% 
+  ggplot(aes(x = , y = resid)) + geom_violin()
+
+nyc_airbnb %>% 
+  modelr::add_residuals(fit) %>% 
+  ggplot(aes(x = stars, y = resid)) + geom_point()
+```
+
+
 ## Problem 2
 
 ```{r import2}
-weather_df = 
-  rnoaa::meteo_pull_monitors(
-    c("USW00094728"),
-    var = c("PRCP", "TMIN", "TMAX"), 
-    date_min = "2017-01-01",
-    date_max = "2017-12-31") %>%
-  mutate(
-    name = recode(id, USW00094728 = "CentralPark_NY"),
-    tmin = tmin / 10,
-    tmax = tmax / 10) %>%
-  select(name, id, everything())
 ```
 
 
