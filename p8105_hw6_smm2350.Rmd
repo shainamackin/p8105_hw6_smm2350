@@ -32,7 +32,6 @@ bwt_data = read.csv("/Users/shainamackin/Desktop/Fall 2021/Data Science I/p8105_
 ... and then clean it by tidying variable names and factoring when relevant so that it's ready for regression analysis. 
 ```{r clean1}
 bwt_df = bwt_data %>%
-  janitor::clean_names() %>%
   mutate(
     babysex = factor(babysex),
     frace = factor(frace),
@@ -52,7 +51,10 @@ bwt_df = bwt_data %>%
     mrace = fct_recode(mrace, "white" = '1'),
     mrace = fct_recode(mrace, "black" = '2'),
     mrace = fct_recode(mrace, "asian" = '3'),
-    mrace = fct_recode(mrace, "puerto rican" = '4'))
+    mrace = fct_recode(mrace, "puerto rican" = '4')
+    ) %>%
+  drop_na() %>%
+  janitor::clean_names()
 ```
 
 ## Problem 2
