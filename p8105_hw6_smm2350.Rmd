@@ -151,6 +151,7 @@ The RMSE of `my_model` is the smallest, indicating that my originally proposed m
 
 ## Problem 2
 
+I'll start by loading the 2017 Central Park weather data.
 ```{r import2}
 weather_df = 
   rnoaa::meteo_pull_monitors(
@@ -165,4 +166,39 @@ weather_df =
   select(name, id, everything())
 ```
 
+Now, I'll use 5000 boostrap samples to produce estimates for r̂^2 and log(β̂0∗β̂1).
+```{r}
+set.seed(1)
+
+weather_bootstrap_r2 = weather_df %>% 
+  bootstrap(n = 5000) %>%
+  mutate(
+    models = map(strap, ~lm(tmax ~ tmin, data = .x)),
+    results = map(models, broom::glance)) %>%
+  select(-strap, -models) %>%
+  unnest(results) %>%
+  summarize(
+    ci_lower = quantile(r.squared, 0.025), 
+    ci_upper = quantile(r.squared, 0.975),
+    )
+
+knitr::kable(weather_bootstrap_r2)
+
+weather_bootstrap_log = weather_df %>%
+  bootstrap(n = 5000) %>% 
+  mutate(
+    models = map(strap, ~lm(tmax ~ tmin, data = .x)),
+    results = map(models, broom::tidy)) %>%
+  select(-strap, -models) %>%
+  unnest(results) %>%
+  mutate(
+    log_est = log(estimate)) %>%
+  group_by(.id) %>%
+  summarize(log_b0b1 = prod(log_est)) %>%
+  summarize(
+    ci_lower = quantile(log_b0b1, 0.025), 
+    ci_upper = quantile(log_b0b1, 0.975))
+
+knitr::kable(weather_bootstrap_log)
+```
 
