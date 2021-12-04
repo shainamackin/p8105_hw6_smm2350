@@ -11,7 +11,6 @@ To begin, I'll load libraries and set themes.
 
 ```{r setup, include=FALSE}
 library(tidyverse)
-library(rvest)
 library(dplyr)
 
 theme_set(theme_minimal() + theme(legend.position = "bottom"))
