@@ -166,8 +166,10 @@ weather_df =
   select(name, id, everything())
 ```
 
-Now, I'll use 5000 boostrap samples to produce estimates for r̂^2 and log(β̂0∗β̂1).
-```{r}
+Now, I'll use 5000 bootstrap samples to produce estimates for r̂^2 and log(β̂0hat∗β̂1hat).
+
+I'll start by producing r^2hat estimates for each bootstrap sample. 
+```{r r2_estimates}
 set.seed(1)
 
 weather_bootstrap_r2 = weather_df %>% 
@@ -177,13 +179,29 @@ weather_bootstrap_r2 = weather_df %>%
     results = map(models, broom::glance)) %>%
   select(-strap, -models) %>%
   unnest(results) %>%
+  summarize(r.squared)
+
+print(weather_bootstrap_r2)
+```
+
+Here are the r^2hat 95% CIs:
+```{r r2_CIs}
+weather_bootstrap_r2_ci = weather_df %>%
+  bootstrap(n = 5000) %>%
+  mutate(
+    models = map(strap, ~lm(tmax ~ tmin, data = .x)),
+    results = map(models, broom::glance)) %>%
+  select(-strap, -models) %>%
+  unnest(results) %>%
   summarize(
     ci_lower = quantile(r.squared, 0.025), 
-    ci_upper = quantile(r.squared, 0.975),
-    )
+    ci_upper = quantile(r.squared, 0.975)) 
 
-knitr::kable(weather_bootstrap_r2)
+weather_bootstrap_r2_ci %>% knitr::kable(digits = 3)
+```
 
+Next, I'll produce log(β̂0∗β̂1) estimates for each bootstrap sample.
+```{r log_estimates}
 weather_bootstrap_log = weather_df %>%
   bootstrap(n = 5000) %>% 
   mutate(
@@ -191,14 +209,80 @@ weather_bootstrap_log = weather_df %>%
     results = map(models, broom::tidy)) %>%
   select(-strap, -models) %>%
   unnest(results) %>%
+  select(.id, term, estimate) %>%
+  mutate(term = if_else(term != "tmin", "intercept", "tmin")) %>% pivot_wider(
+    names_from = term,
+    values_from = estimate) %>%
   mutate(
-    log_est = log(estimate)) %>%
-  group_by(.id) %>%
-  summarize(log_b0b1 = prod(log_est)) %>%
-  summarize(
-    ci_lower = quantile(log_b0b1, 0.025), 
-    ci_upper = quantile(log_b0b1, 0.975))
-
-knitr::kable(weather_bootstrap_log)
+    logb0b1 = log(intercept) + log(tmin)
+    )
 ```
 
+Here are the log(β̂hat0∗β̂hat1) 95% CIs: 
+```{r log_CIs}
+weather_bootstrap_log_ci = weather_df %>%
+  bootstrap(n = 5000) %>% 
+  mutate(
+    models = map(strap, ~lm(tmax ~ tmin, data = .x)),
+    results = map(models, broom::tidy)) %>%
+  select(-strap, -models) %>%
+  unnest(results) %>%
+  select(.id, term, estimate) %>%
+  mutate(term = if_else(term != "tmin", "intercept", "tmin")) %>% pivot_wider(
+    names_from = term,
+    values_from = estimate) %>%
+  mutate(
+    logb0b1 = log(intercept) + log(tmin)
+    ) %>%
+  summarize(
+    ci_lower = quantile(logb0b1, 0.025), 
+    ci_upper = quantile(logb0b1, 0.975))
+
+weather_bootstrap_log_ci %>% knitr::kable(digits = 3)
+```
+
+I'll also plot the distribution of these estimates below, starting with r^2...
+```{r plot_estimates_r2}
+weather_df %>% 
+  bootstrap(n = 5000) %>%
+  mutate(
+    models = map(strap, ~lm(tmax ~ tmin, data = .x)),
+    results = map(models, broom::glance)) %>%
+  select(-strap, -models) %>%
+  unnest(results) %>%
+  ggplot(aes(x = r.squared)) +
+  geom_density() + 
+  labs(
+    x = "R Squared",
+    y = "Density",
+    title = "Distribution of R Squared Estimates from Bootstrap Sample (n = 5000)"
+  )
+```
+
+... and continuing with log(β̂hat0∗β̂hat):
+```{r plot_estimates_log}
+weather_df %>%
+  bootstrap(n = 5000) %>% 
+  mutate(
+    models = map(strap, ~lm(tmax ~ tmin, data = .x)),
+    results = map(models, broom::tidy)) %>%
+  select(-strap, -models) %>%
+  unnest(results) %>%
+  select(.id, term, estimate) %>%
+  mutate(term = if_else(term != "tmin", "intercept", "tmin")) %>% pivot_wider(
+    names_from = term,
+    values_from = estimate) %>%
+  mutate(
+    logb0b1 = log(intercept) + log(tmin)
+    ) %>%
+  ggplot(aes(x = logb0b1)) +
+  geom_density() + 
+  labs(
+    x = "Log(Beta0 * Beta1)",
+    y = "Density",
+    title = "Distribution of Log(Beta0 * Beta1) Estimates from Bootstrap Sample (n = 5000)"
+  )
+```
+
+The distribution of r^2 is approximately normally distributed, though ever so slightly left skewed, which may be related to the frequency with which large outliers are included in the bootstrap sample. It is centered around 0.9125, approximately. <br/>
+Similarly, the distribution of log(β̂hat0∗β̂ha) is approximately normally distributed, though also slightly left skewed, which - again - may be related to the frequency with which large outliers are included in the bootstrap sample. It is centered around 2.2, approximately. 
